@@ -4,7 +4,7 @@ const {open} = require('sqlite')
 const sqlite3 = require('sqlite3')
 
 const bcrypt = require('bcrypt')
-const jwtToken = require('jsonwebtoken')
+const jwt = require('jsonwebtoken')
 
 const app = express()
 app.use(express.json())
@@ -43,6 +43,27 @@ app.post('/register/', async (request, response) => {
       await database.run(createNewUser)
       response.status(200)
       response.send('User created successfully')
+    }
+  } catch (e) {
+    console.log(`Error: ${e.message}`)
+  }
+})
+
+app.post('/login/', async (request, response) => {
+  const {username, password} = request.body
+  try {
+    const api2 = `select * from user where username = '${username}'`
+    const dbUser = await database.get(api2)
+    if (dbUser === undefined) {
+      response.status(400)
+      response.send('Invalid user')
+    } else if (!(await bcrypt.compare(password, dbUser.password))) {
+      response.status(400)
+      response.send('Invalid password')
+    } else {
+      const payload = {username: dbUser.username}
+      const jwttoken = jwt.sign(payload, 'secretKey', {expiresIn: '1h'}) // Adjust secret and options as needed
+      response.status(200).send({jwttoken}) // Include status code 200
     }
   } catch (e) {
     console.log(`Error: ${e.message}`)
